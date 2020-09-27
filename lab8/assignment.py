@@ -1,6 +1,7 @@
 from multiprocessing import Process, Pipe
 from os import getpid
 from datetime import datetime
+from time import sleep
 
 #prints the local Lamport timestamp
 def local_time(counter):
@@ -9,30 +10,33 @@ def local_time(counter):
 
 #calculates the new timestamp when a process receives a message
 def calc_recv_timestamp(recv_time_stamp, counter):
-    return max(recv_time_stamp, counter) + 1
+    for id  in range(len(counter)):
+        counter[id] = max(recv_time_stamp[id], counter[id])
+    return counter
 
 #function for every event that may occur
 def event(pid, counter):
-    counter += 1
+    counter[pid] += 1
     print('Something happened in {} !'.\
           format(pid) + local_time(counter))
     return counter
 
 def send_message(pipe, pid, counter):
-    counter += 1
+    counter[pid] += 1
     pipe.send(('Empty shell', counter))
     print('Message sent from ' + str(pid) + local_time(counter))
     return counter
 
 def recv_message(pipe, pid, counter):
+    counter[pid] += 1
     message, timestamp = pipe.recv()
     counter = calc_recv_timestamp(timestamp, counter)
     print('Message received at ' + str(pid)  + local_time(counter))
     return counter
 
 def process_a(pipe12):
-    pid = getpid()
-    counter = 0
+    pid = 0
+    counter = [0,0,0]
     '''counter = event(pid, counter)
     counter = send_message(pipe12, pid, counter)
     counter  = event(pid, counter)
@@ -45,10 +49,12 @@ def process_a(pipe12):
     counter  = event(pid, counter)
     counter  = event(pid, counter)
     counter = recv_message(pipe12, pid, counter)
+    sleep(2)
+    print("Final vector state at process a:" + local_time(counter))
 
 def process_b(pipe21, pipe23):
-    pid = getpid()
-    counter = 0
+    pid = 1
+    counter = [0,0,0]
     '''counter = recv_message(pipe21, pid, counter)
     counter = send_message(pipe21, pid, counter)
     counter = send_message(pipe23, pid, counter)
@@ -61,14 +67,18 @@ def process_b(pipe21, pipe23):
     counter = send_message(pipe21, pid, counter)
     counter = send_message(pipe23, pid, counter)
     counter = send_message(pipe23, pid, counter)
+    sleep(2)
+    print("Final vector state at process b:" + local_time(counter))
 
 def process_c(pipe32):
-    pid = getpid()
-    counter = 0
+    pid = 2
+    counter = [0,0,0]
     counter = send_message(pipe32, pid, counter)
     counter = recv_message(pipe32, pid, counter)
     counter = event(pid, counter)
     counter = recv_message(pipe32, pid, counter)
+    sleep(2)
+    print("Final vector state at process c:" + local_time(counter))
 
 if __name__ == '__main__':
     oneandtwo, twoandone = Pipe()
